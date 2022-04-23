@@ -1,0 +1,74 @@
+version: "3.7"
+
+services:
+    # image project
+    app:
+        container_name: tnw-app
+        build:
+            context: .
+            dockerfile: Dockerfile
+        #image: especializati/laravel-app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - redis
+        networks:
+            - tnw-network
+
+    # nginx
+    nginx:
+        container_name: nginx
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - ./:/var/www
+            - ./.docker/nginx/:/etc/nginx/conf.d/
+        networks:
+            - tnw-network
+
+    # db mysql
+    db:
+        container_name: tnw-db
+        image: mysql:5.7.22
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+        volumes:
+            - ./.docker/mysql/dbdata:/var/lib/mysql
+        ports:
+            - "3388:3306"
+        networks:
+            - tnw-network
+
+    phpmyadmin:
+        container_name: tnw-phpmyadmin
+        image: phpmyadmin/phpmyadmin:latest
+        environment:
+            PMA_HOST: db
+            PMA_PORT: 3306
+            PMA_ARBITRARY: 1
+        ports:
+            - "8080:80"
+        networks:
+            - tnw-network
+        depends_on:
+            - db
+
+    redis:
+        image: redis:alpine
+        container_name: redis
+        expose:
+            - 6379
+        networks:
+            - tnw-network
+
+networks:
+    tnw-network:
+        driver: bridge
